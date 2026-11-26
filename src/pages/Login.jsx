@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import api from "../api/axiosInstance";
 import { ENDPOINTS } from "../api/endpoints";
+import { Link } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -114,7 +115,7 @@ const Login = () => {
             </div>
           )}
           <div className="text-blue-600 text-end font-semibold">
-            <a href="">forgot-password?</a>
+            <Link to="/forgot-password">forgot-password?</Link>
           </div>
         </div>
 
@@ -152,10 +153,10 @@ const Login = () => {
         </button>
         <p className="text-center">
           Create your account?
-          <a href="" className="text-blue-600">
+          <Link to="/register" className="text-blue-600">
             {" "}
             Signup
-          </a>
+          </Link>
         </p>
       </form>
     </div>
