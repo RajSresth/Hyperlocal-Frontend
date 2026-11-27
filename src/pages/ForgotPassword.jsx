@@ -3,6 +3,8 @@ import api from "../api/axiosInstance";
 import { ENDPOINTS } from "../api/endpoints";
 import { FaArrowLeft } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
+import useCountdown from "../hooks/useCountdown";
+import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -10,18 +12,25 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState(1);
+  const [otpExpiry, setOtpExpiry] = useState(null);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
 
-  const verifyEmail = async () => {
+  const { expired, text } = useCountdown(otpExpiry);
+
+  const forgotPassword = async () => {
     setLoading(true);
     try {
-      const response = await api.post(ENDPOINTS.AUTH.FORGOT_PASSWORD, {
-        email
+      const { data } = await api.post(ENDPOINTS.AUTH.FORGOT_PASSWORD, {
+        email,
       });
-      console.log(response);
+      console.log(data);
 
-      if (response.data.success) {
-        setError("")
+      if (data.success) {
+        setOtpExpiry(data.otpExpiry);
+        setError("");
         setStep((prev) => prev + 1);
       }
     } catch (error) {
@@ -35,7 +44,7 @@ const ForgotPassword = () => {
   const verifyOtp = async () => {
     setLoading(true);
     try {
-      const response = await api.post(ENDPOINTS.AUTH.FORGOT_PASSWORD, {
+      const response = await api.post(ENDPOINTS.AUTH.VERIFY_OTP, {
         email,
         otp,
       });
@@ -46,7 +55,50 @@ const ForgotPassword = () => {
       }
     } catch (error) {
       console.log(error);
-      setError(error);
+      setError(error.response.data.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendOtp = async () => {
+    setLoading(true);
+    setOtp("");
+    try {
+      const { data } = await api.post(ENDPOINTS.AUTH.FORGOT_PASSWORD, {
+        email,
+      });
+      console.log(data);
+
+      if (data.success) {
+        setOtpExpiry(data.otpExpiry);
+        setError("");
+      }
+    } catch (error) {
+      console.log(error);
+      setError(error.response.data.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.post(ENDPOINTS.AUTH.RESET_PASSWORD, {
+        email,
+        password,
+        confirmPassword,
+      });
+
+      console.log(data);
+      if (data.success) {
+        setError("");
+        navigate("/login", { replace: true });
+      }
+    } catch (error) {
+      console.log(error);
+      setError(error.response.data.message);
     } finally {
       setLoading(false);
     }
@@ -89,7 +141,7 @@ const ForgotPassword = () => {
             />
             <button
               type="button"
-              onClick={verifyEmail}
+              onClick={forgotPassword}
               className="w-full mt-5 bg-blue-600 py-2 rounded-md text-white font-semibold tracking-wide hover:cursor-pointer hover:bg-blue-700"
             >
               {loading ? "Submitting..." : "Verify Email"}
@@ -99,7 +151,6 @@ const ForgotPassword = () => {
 
         {step === 2 && (
           <div>
-
             <label htmlFor="email" className="text-neutral-400">
               Email<sup className="">*</sup>
             </label>
@@ -122,22 +173,83 @@ const ForgotPassword = () => {
               id="otp"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-              placeholder="Enter email"
+              placeholder="Enter Otp"
+              className="w-full ring-1 ring-neutral-600  rounded py-1.5 px-4 text-md focus-within:outline-2 focus-within:outline-blue-600"
+              required
+            />
+            <div className="text-end text-red-600">
+              {expired ? "OTP expired" : `${text}`}
+            </div>
+
+            <button
+              type="button"
+              onClick={verifyOtp}
+              disabled={loading || expired || otp.length === 0}
+              className="w-full mt-5 bg-blue-600 py-2 rounded-md text-white font-semibold tracking-wide hover:cursor-pointer hover:bg-blue-700"
+            >
+              {loading ? "Submitting..." : "Verify OTP"}
+            </button>
+            <button
+              type="button"
+              onClick={resendOtp}
+              disabled={loading || !expired}
+              className="w-full mt-5 bg-orange-600 py-2 rounded-md text-white font-semibold tracking-wide hover:cursor-pointer hover:bg-orange-700"
+            >
+              {loading ? "Submitting..." : "Resend OTP"}
+            </button>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <label htmlFor="password" className="font-semibold">
+              Password<sup className="text-red-600">*</sup>
+            </label>
+            <div className="relative mb-4">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="at least 8 characters"
+                className="w-full ring-1 ring-neutral-600  rounded py-1.5 px-4 text-md focus-within:outline-2 focus-within:outline-blue-600"
+                required
+              />
+              <div
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute top-[50%] -translate-y-[calc(50%)] right-3 cursor-pointer"
+              >
+                {showPassword ? (
+                  <FaRegEye size={20} />
+                ) : (
+                  <FaRegEyeSlash size={20} />
+                )}
+              </div>
+            </div>
+
+            <label htmlFor="confirmPassword" className="font-semibold">
+              Confirm Password<sup className="text-red-600">*</sup>
+            </label>
+            <input
+              type="text"
+              id="confirmPassword"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Enter confirm password"
               className="w-full ring-1 ring-neutral-600  rounded py-1.5 px-4 text-md focus-within:outline-2 focus-within:outline-blue-600"
               required
             />
 
             <button
               type="button"
-              onClick={verifyOtp}
+              onClick={resetPassword}
+              disabled={loading}
               className="w-full mt-5 bg-blue-600 py-2 rounded-md text-white font-semibold tracking-wide hover:cursor-pointer hover:bg-blue-700"
             >
-              {loading ? "Submitting..." : "Verify OTP"}
+              {loading ? "Submitting..." : "Reset Password"}
             </button>
           </div>
         )}
-
-        {step === 3 && <div>New Password Confirm Password</div>}
       </form>
     </div>
   );
